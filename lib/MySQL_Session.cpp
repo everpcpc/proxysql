@@ -763,8 +763,10 @@ int MySQL_Session::handler_again___status_PINGING_SERVER() {
 		myconn->async_state_machine=ASYNC_IDLE;
 		//if ((myconn->reusable==true) && ((myds->myprot.prot_status & SERVER_STATUS_IN_TRANS)==0)) {
 		if (mysql_thread___multiplexing && (myconn->reusable==true) && myds->myconn->IsActiveTransaction()==false && myds->myconn->MultiplexDisabled()==false) {
+			proxy_debug(PROXY_DEBUG_GENERIC,1, "-----------> returnning connection to pool after ping\n");
 			myds->return_MySQL_Connection_To_Pool();
 		} else {
+			proxy_debug(PROXY_DEBUG_GENERIC,1, "-----------> destroy connection after ping\n");
 			myds->destroy_MySQL_Connection_From_Pool(true);
 		}
 		delete mybe->server_myds;
@@ -2540,20 +2542,25 @@ handler_again:
 //					CurrentQuery.end();
 //					myds->free_mysql_real_query();
 					RequestEnd(myds);
+					proxy_debug(PROXY_DEBUG_GENERIC,1, "------------------------> RequestEnd...\n");
 					//if ((myds->myconn->reusable==true) && ((myds->myprot.prot_status & SERVER_STATUS_IN_TRANS)==0)) {
 					if (mysql_thread___multiplexing && (myds->myconn->reusable==true) && myds->myconn->IsActiveTransaction()==false && myds->myconn->MultiplexDisabled()==false) {
 						myds->DSS=STATE_NOT_INITIALIZED;
 						myds->return_MySQL_Connection_To_Pool();
+					    proxy_debug(PROXY_DEBUG_GENERIC,1, "-----------> returnning connection to pool yeah!\n");
 						if (transaction_persistent==true) {
 							transaction_persistent_hostgroup=-1;
 						}
 					} else {
+					    proxy_debug(PROXY_DEBUG_GENERIC,1, "--------------> we are not destroying the connection\n");
+					    proxy_debug(PROXY_DEBUG_GENERIC,1, "--------------> current transaction_persistent_hostgroup is %d\n", transaction_persistent_hostgroup);
 						myconn->async_state_machine=ASYNC_IDLE;
 						myds->DSS=STATE_MARIADB_GENERIC;
 						if (transaction_persistent==true) {
 							if (transaction_persistent_hostgroup==-1) { // change only if not set already, do not allow to change it again
 								if (myds->myconn->IsActiveTransaction()==true) { // only active transaction is important here. Ignore other criterias
 									transaction_persistent_hostgroup=current_hostgroup;
+					                proxy_debug(PROXY_DEBUG_GENERIC,1, "--------------> transaction is active, change it to current hostgroup\n");
 								}
 							} else {
 								if (myds->myconn->IsActiveTransaction()==false) { // a transaction just completed
@@ -2753,12 +2760,15 @@ handler_again:
 //							myds->free_mysql_real_query();
 							RequestEnd(myds);
 							//if ((myds->myconn->reusable==true) && ((myds->myprot.prot_status & SERVER_STATUS_IN_TRANS)==0)) {
+					        proxy_debug(PROXY_DEBUG_GENERIC,1, "------------------------> RequestEnd...\n");
 							if (mysql_thread___multiplexing && (myds->myconn->reusable==true) && myds->myconn->IsActiveTransaction()==false && myds->myconn->MultiplexDisabled()==false) {
 								myds->DSS=STATE_NOT_INITIALIZED;
 								myds->return_MySQL_Connection_To_Pool();
+					            proxy_debug(PROXY_DEBUG_GENERIC,1, "------------------------> returnning conn to pool\n");
 							} else {
 								myconn->async_state_machine=ASYNC_IDLE;
 								myds->DSS=STATE_MARIADB_GENERIC;
+					            proxy_debug(PROXY_DEBUG_GENERIC,1, "------------------------> setting async_idle\n");
 							}
 						}
 					} else {
